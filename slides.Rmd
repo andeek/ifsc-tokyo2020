@@ -1,0 +1,319 @@
+---
+title: "The Need for Speed"
+subtitle: "Climbing in the Tokyo 2020 Olympics"
+author: "Andee Kaplan"
+institute: "Stat Alliance @ CSU"
+date: "2020/03/04 (updated: `r Sys.Date()`)"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+background-image: url(https://upload.wikimedia.org/wikipedia/en/thumb/1/1d/2020_Summer_Olympics_logo_new.svg/1200px-2020_Summer_Olympics_logo_new.svg.png)
+background-size: contain
+background-position: center
+
+
+???
+
+Image credit: [Tokyo 2020](https://tokyo2020.org/)
+
+---
+
+# Sport Climbing
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(knitr)
+library(scales)
+
+set.seed(400)
+
+opts_chunk$set(message=FALSE, warning=FALSE)
+
+theme_set(theme_bw(base_size = 15))
+```
+
+International (indoor) climbing competitions have been held since 1980. Currently, the governing organization is the [International Federation of Sport Climbing](ifsc-climbing.org).
+
+There are three disciplines: **lead**, **bouldering**, and **speed**.
+
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/ndKAgQuxQDY?start=153" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+---
+
+# Sport Climbing
+
+International (indoor) climbing competitions have been held since 1980. Currently, the governing organization is the [International Federation of Sport Climbing](ifsc-climbing.org).
+
+There are three disciplines: **lead**, **bouldering**, and **speed**.
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/p_6frRT5VqY?start=5736" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+---
+
+# Sport Climbing
+
+International (indoor) climbing competitions have been held since 1980. Currently, the governing organization is the [International Federation of Sport Climbing](ifsc-climbing.org).
+
+There are three disciplines: **lead**, **bouldering**, and **speed**.
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/vmV9z0NFb_M?start=2137" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+---
+
+# Climbing in the Tokyo 2020 Olympics
+
+Tokyo 2020 is the **first time** climbing will be an event in the Olympics! There will be one **combined** event for men and one for women. The winners will be determined based on who performs best in **all three** disciplines.
+
+> I think that speed climbing is an artificial discipline... which doesn't have much in common with the climbing philosophy. Anything would be better than this kind of combination. If the [Olympic] Games include the combination, I will have to think a lot about participating or boycotting it.
+
+[Adam Ondra](https://www.epictv.com/media/podcast/adam-ondra-offers-his-opinion-about-climbing-in-the-olympic-games/604973)
+
+> [The decision to include speed climbing is like] asking a middle distance runner to compete in the sprint.
+
+Lynn Hill
+
+> No boulderer has transitioned to speed and lead, and no speed climber has done it to bouldering and lead. Sport climbing is like asking Usain Bolt to run a marathon and then do the hurdles.
+
+[Shauna Coxsey](https://web.archive.org/web/20190810142735/https://www.olympic.org/news/sport-climbing-is-like-asking-usain-bolt-to-run-a-marathon-and-then-do-the-hurdles)
+
+---
+
+# Best climber in the world?
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/8SzKL7xy_f0?start=2198" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+---
+
+# Scoring Format & Qualification
+
+- There are 40 (20 men and 20 women) spots and each country can obtain a maximum of 2 spots in each event.
+
+- There will be 8 spots in each final (men and women), determined by the qualification round. Medals will be awarded from the top 3 in each final.
+
+- Scoring is determined by multiplying the climbers' rankings from each event.
+
+    - e.g. If a climber comes in 1st in speed, 20th in bouldering and 20th in lead in the qualifying round, they will have a score of $1\times 20\times 20 = 400$
+    
+- Nobody has a good feel for the expected distribution of these scores, since this is a new format.
+
+**Monte Carlo** to the rescue!
+
+---
+
+# Simulation Study
+
+We can simulate event results by simply sampling rankings. 
+
+**Assumption:** Speed specialists will come in top of the speed event and bottom of the lead and bouldering events.
+
+```{r}
+scores_rep <- function(n, n_speed) {
+  speed <- lead <- boulder <- rep(NA, n)
+  n_others <- n - n_speed
+  
+  # speed should be top in speed and last in the others
+  speed[seq_len(n_speed)] <- sample(as.character(seq_len(n_speed)), n_speed)
+  lead[seq_len(n_speed)] <- sample(as.character(n_others + seq_len(n_speed)), n_speed)
+  boulder[seq_len(n_speed)] <- sample(as.character(n_others + seq_len(n_speed)), n_speed)
+  
+  # non speed specialists are the opposite
+  speed[n_speed + seq_len(n_others)] <- sample(as.character(n_speed + seq_len(n_others)), n_others)
+  lead[n_speed + seq_len(n_others)] <- sample(as.character(seq_len(n_others)), n_others)
+  boulder[n_speed + seq_len(n_others)] <- sample(as.character(seq_len(n_others)), n_others)
+
+  as.numeric(speed)*as.numeric(boulder)*as.numeric(lead) # multiplicative rounds
+}
+```
+
+
+---
+
+# Distribution of Qualifier Scores
+
+```{r}
+B <- 20000
+n <- 20
+n_speed <- 3 # there are 3 speed specialists qualified
+scores_star <- matrix(nrow = B, ncol = n)
+for(i in seq_len(B)) {
+  scores_star[i,] <- scores_rep(n, n_speed)
+}
+
+summary(as.numeric(scores_star))
+```
+
+
+```{r echo = FALSE, fig.height=3}
+ggplot() +
+  geom_histogram(aes(as.numeric(scores_star)), binwidth = 50) +
+  xlab("Simulated Combined Scores")
+```
+
+---
+# Distribution of Qualifier Scores for Specialists
+
+```{r, echo = FALSE, fig.height=5}
+data.frame(score = as.numeric(scores_star[, seq_len(n_speed)]), specialist = TRUE) %>%
+  bind_rows(data.frame(score = as.numeric(scores_star[, (n_speed + 1):n]), specialist = FALSE)) %>%
+  ggplot() +
+  geom_histogram(aes(score, fill = specialist, colour = specialist), alpha = .5, binwidth = 50)
+  
+```
+
+---
+
+# Qualifying for the Final
+
+What is a good score? What score will get you into the final?
+
+```{r, fig.height = 3}
+finals_star <- t(apply(scores_star, 1, rank)) <= 8
+
+ggplot() +
+  geom_histogram(aes(scores_star[finals_star]), binwidth = 50) +
+  xlab("Simulated Combined Scores Qualified for Finals")
+```
+
+If a climber has a score under 500, they have a `r percent(sum(finals_star & scores_star <= 500)/(B*n)/(sum(scores_star <= 500)/(B*n)))` chance of qualifying for the finals.
+
+---
+# Speed Climbers Qualifying for the Final
+
+How many speed climbers will qualify for the final?
+
+```{r, fig.height = 3.5}
+n_speed_final <- rowSums(finals_star[, seq_len(n_speed)])
+
+ggplot() +
+  geom_histogram(aes(n_speed_final), binwidth = 1)
+```
+
+With probability `r percent(sum(n_speed_final == 1)/B)`, there will be **1** speed climber in the final. There is a `r percent(sum(n_speed_final == 0)/B)` chance there will be no speed climbers in the final.
+
+---
+
+# Finals Scores
+
+There is a pretty high probability (`r percent(sum(n_speed_final == 1)/B)`) that the makeup of the final will be 1 speed climber and 7 non-speed climbers. 
+
+```{r}
+n <- 8 
+n_speed <- 1 
+scores_final_star <- matrix(nrow = B, ncol = n)
+
+for(i in seq_len(B)) {
+  scores_final_star[i,] <- scores_rep(n, n_speed)
+}
+```
+
+```{r, echo=FALSE, fig.height=3}
+ggplot() +
+  geom_histogram(aes(as.numeric(scores_final_star)), binwidth = 10) +
+  xlab("Simulated Combined Finals Scores") +
+  geom_vline(aes(xintercept = 64), colour = "red", lty = 2)
+```
+
+With 1 speed climber in the final, their score is essentially fixed at 64.
+
+---
+
+# Medals
+
+What will it take to **medal** in the Olympics?
+
+```{r, fig.height=4}
+medals_star <- t(apply(scores_final_star, 1, rank)) <= 3
+
+ggplot() +
+  geom_histogram(aes(scores_final_star[medals_star]), binwidth = 5) +
+  xlab("Simulated Combined Finals Scores to Medal") +
+  geom_vline(aes(xintercept = 64), colour = "red", lty = 2)
+```
+
+```{r}
+speed_medal <- medals_star[, seq_len(n_speed)]
+```
+
+---
+
+# Medals for Speed Specialists
+
+There is a `r percent(sum(speed_medal)/B)` chance the speed specialist will medal in the Olympics, given there is 1 in the final.
+
+We can approximate the overall probability that a speed specialist (SS) will medal as
+
+\begin{align*}
+&P(\text{Atleast 1 Speed Specialist Medal}) = 1 - P(\text{0 Speed Specialists Medal})  \\
+&\qquad \qquad = 1 - \sum\limits_{j = 0}^3 P(\text{0 SS Medal} | \text{j SS in Final})P(\text{j SS in Final})
+\end{align*}
+
+and the probability that a speed specialist will win gold as
+
+\begin{align*}
+&P(\text{Speed Specialist Wins Gold}) \\
+&\qquad \qquad = \sum\limits_{j = 0}^3 P(\text{Speed Specialist Wins Gold} | \text{j SS in Final})P(\text{j SS in Final})
+\end{align*}
+
+---
+# Probability of Speed Success
+
+```{r}
+zero_speed_given_final <- function(n_speed, B) {
+  scores_final_star <- matrix(nrow = B, ncol = 8)
+  for(i in seq_len(B)) {
+    scores_final_star[i,] <- scores_rep(8, n_speed)
+  }
+  
+  medals_star <- t(apply(scores_final_star, 1, rank)) <= 3
+  if(n_speed == 0) return(1)
+  else if(n_speed == 1) return(sum(!medals_star[, 1])/B)
+  else return(sum(rowSums(medals_star[, seq_len(n_speed)]) == 0)/B)
+}
+
+prob_speed_final <- table(n_speed_final)/B
+prob_zero_speed_given_final <- vapply(as.numeric(names(prob_speed_final)), FUN.VALUE = numeric(1), zero_speed_given_final, B = B)
+```
+
+```{r, echo = FALSE}
+gold_speed_given_final <- function(n_speed, B) {
+  scores_final_star <- matrix(nrow = B, ncol = 8)
+  for(i in seq_len(B)) {
+    scores_final_star[i,] <- scores_rep(8, n_speed)
+  }
+  
+  gold_star <- t(apply(scores_final_star, 1, rank)) == 1
+  if(n_speed == 0) return(0)
+  else if(n_speed == 1) return(sum(gold_star[, 1])/B)
+  else return(sum(rowSums(gold_star[, seq_len(n_speed)]) == 1)/B)
+}
+
+prob_gold_speed_given_final <- vapply(as.numeric(names(prob_speed_final)), FUN.VALUE = numeric(1), gold_speed_given_final, B = B)
+```
+The probability of a speed specialist medal is `r percent(1 - sum(prob_zero_speed_given_final*prob_speed_final))` and the probability of a speed specialist winning gold is `r percent(sum(prob_gold_speed_given_final*prob_speed_final))`
+
+---
+
+<iframe src="https://giphy.com/embed/PFwKHjOcIoVUc" width="711" height="400" frameBorder="0" class="giphy-embed" allowFullScreen></iframe><p><a href="https://giphy.com/gifs/PFwKHjOcIoVUc">via GIPHY</a></p>
+
+---
+# Format over Function
+
+The three core concepts of the Tokyo 2020 Olympic Games are **Achieving Personal Best**, **Unity in Diversity**, and **Connecting to Tomorrow**.
+
+> [T]he Tokyo 2020 Games aim to deliver an event where every athlete can realise their best performance and achieve their personal best.
+
+> The Tokyo 2020 Games will foster a welcoming environment and raise awareness of unity in diversity among citizens of the world.
+
+[Tokyo 2020](https://tokyo2020.org/en/games/vision/)
+
+The format that the Olympics has adopted for Sport Climbing does not foster these goals.
+
+How can a speed specialist realize their **personal best** and feel part of a **welcoming environment** when there is zero chance for a gold medal before the games even begin?
+

@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>The Need for Speed</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Andee Kaplan" />
+    <link href="libs/remark-css-0.0.1/default.css" rel="stylesheet" />
+    <link href="libs/remark-css-0.0.1/default-fonts.css" rel="stylesheet" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# The Need for Speed
+## Climbing in the Tokyo 2020 Olympics
+### Andee Kaplan
+### Stat Alliance @ CSU
+### 2020/03/04 (updated: 2020-03-04)
+
+---
+
+
+background-image: url(https://upload.wikimedia.org/wikipedia/en/thumb/1/1d/2020_Summer_Olympics_logo_new.svg/1200px-2020_Summer_Olympics_logo_new.svg.png)
+background-size: contain
+background-position: center
+
+
+???
+
+Image credit: [Tokyo 2020](https://tokyo2020.org/)
+
+---
+
+# Sport Climbing
+
+
+
+International (indoor) climbing competitions have been held since 1980. Currently, the governing organization is the [International Federation of Sport Climbing](ifsc-climbing.org).
+
+There are three disciplines: **lead**, **bouldering**, and **speed**.
+
+
+&lt;iframe width="560" height="315" src="https://www.youtube.com/embed/ndKAgQuxQDY?start=153" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen&gt;&lt;/iframe&gt;
+
+---
+
+# Sport Climbing
+
+International (indoor) climbing competitions have been held since 1980. Currently, the governing organization is the [International Federation of Sport Climbing](ifsc-climbing.org).
+
+There are three disciplines: **lead**, **bouldering**, and **speed**.
+
+&lt;iframe width="560" height="315" src="https://www.youtube.com/embed/p_6frRT5VqY?start=5736" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen&gt;&lt;/iframe&gt;
+
+---
+
+# Sport Climbing
+
+International (indoor) climbing competitions have been held since 1980. Currently, the governing organization is the [International Federation of Sport Climbing](ifsc-climbing.org).
+
+There are three disciplines: **lead**, **bouldering**, and **speed**.
+
+&lt;iframe width="560" height="315" src="https://www.youtube.com/embed/vmV9z0NFb_M?start=2137" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen&gt;&lt;/iframe&gt;
+
+---
+
+# Climbing in the Tokyo 2020 Olympics
+
+Tokyo 2020 is the **first time** climbing will be an event in the Olympics! There will be one **combined** event for men and one for women. The winners will be determined based on who performs best in **all three** disciplines.
+
+&gt; I think that speed climbing is an artificial discipline... which doesn't have much in common with the climbing philosophy. Anything would be better than this kind of combination. If the [Olympic] Games include the combination, I will have to think a lot about participating or boycotting it.
+
+[Adam Ondra](https://www.epictv.com/media/podcast/adam-ondra-offers-his-opinion-about-climbing-in-the-olympic-games/604973)
+
+&gt; [The decision to include speed climbing is like] asking a middle distance runner to compete in the sprint.
+
+Lynn Hill
+
+&gt; No boulderer has transitioned to speed and lead, and no speed climber has done it to bouldering and lead. Sport climbing is like asking Usain Bolt to run a marathon and then do the hurdles.
+
+[Shauna Coxsey](https://web.archive.org/web/20190810142735/https://www.olympic.org/news/sport-climbing-is-like-asking-usain-bolt-to-run-a-marathon-and-then-do-the-hurdles)
+
+---
+
+# Best climber in the world?
+
+&lt;iframe width="560" height="315" src="https://www.youtube.com/embed/8SzKL7xy_f0?start=2198" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen&gt;&lt;/iframe&gt;
+
+---
+
+# Scoring Format &amp; Qualification
+
+- There are 40 (20 men and 20 women) spots and each country can obtain a maximum of 2 spots in each event.
+
+- There will be 8 spots in each final (men and women), determined by the qualification round. Medals will be awarded from the top 3 in each final.
+
+- Scoring is determined by multiplying the climbers' rankings from each event.
+
+    - e.g. If a climber comes in 1st in speed, 20th in bouldering and 20th in lead in the qualifying round, they will have a score of `\(1\times 20\times 20 = 400\)`
+    
+- Nobody has a good feel for the expected distribution of these scores, since this is a new format.
+
+**Monte Carlo** to the rescue!
+
+---
+
+# Simulation Study
+
+We can simulate event results by simply sampling rankings. 
+
+**Assumption:** Speed specialists will come in top of the speed event and bottom of the lead and bouldering events.
+
+
+```r
+scores_rep &lt;- function(n, n_speed) {
+  speed &lt;- lead &lt;- boulder &lt;- rep(NA, n)
+  n_others &lt;- n - n_speed
+  
+  # speed should be top in speed and last in the others
+  speed[seq_len(n_speed)] &lt;- sample(as.character(seq_len(n_speed)), n_speed)
+  lead[seq_len(n_speed)] &lt;- sample(as.character(n_others + seq_len(n_speed)), n_speed)
+  boulder[seq_len(n_speed)] &lt;- sample(as.character(n_others + seq_len(n_speed)), n_speed)
+  
+  # non speed specialists are the opposite
+  speed[n_speed + seq_len(n_others)] &lt;- sample(as.character(n_speed + seq_len(n_others)), n_others)
+  lead[n_speed + seq_len(n_others)] &lt;- sample(as.character(seq_len(n_others)), n_others)
+  boulder[n_speed + seq_len(n_others)] &lt;- sample(as.character(seq_len(n_others)), n_others)
+
+  as.numeric(speed)*as.numeric(boulder)*as.numeric(lead) # multiplicative rounds
+}
+```
+
+
+---
+
+# Distribution of Qualifier Scores
+
+
+```r
+B &lt;- 20000
+n &lt;- 20
+n_speed &lt;- 3 # there are 3 speed specialists qualified
+scores_star &lt;- matrix(nrow = B, ncol = n)
+for(i in seq_len(B)) {
+  scores_star[i,] &lt;- scores_rep(n, n_speed)
+}
+
+summary(as.numeric(scores_star))
+```
+
+```
+##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##     4.0   320.0   684.0   933.7  1200.0  5780.0
+```
+
+
+![](slides_files/figure-html/unnamed-chunk-4-1.png)&lt;!-- --&gt;
+
+---
+# Distribution of Qualifier Scores for Specialists
+
+![](slides_files/figure-html/unnamed-chunk-5-1.png)&lt;!-- --&gt;
+
+---
+
+# Qualifying for the Final
+
+What is a good score? What score will get you into the final?
+
+
+```r
+finals_star &lt;- t(apply(scores_star, 1, rank)) &lt;= 8
+
+ggplot() +
+  geom_histogram(aes(scores_star[finals_star]), binwidth = 50) +
+  xlab("Simulated Combined Scores Qualified for Finals")
+```
+
+![](slides_files/figure-html/unnamed-chunk-6-1.png)&lt;!-- --&gt;
+
+If a climber has a score under 500, they have a 94% chance of qualifying for the finals.
+
+---
+# Speed Climbers Qualifying for the Final
+
+How many speed climbers will qualify for the final?
+
+
+```r
+n_speed_final &lt;- rowSums(finals_star[, seq_len(n_speed)])
+
+ggplot() +
+  geom_histogram(aes(n_speed_final), binwidth = 1)
+```
+
+![](slides_files/figure-html/unnamed-chunk-7-1.png)&lt;!-- --&gt;
+
+With probability 94%, there will be **1** speed climber in the final. There is a 4% chance there will be no speed climbers in the final.
+
+---
+
+# Finals Scores
+
+There is a pretty high probability (94%) that the makeup of the final will be 1 speed climber and 7 non-speed climbers. 
+
+
+```r
+n &lt;- 8 
+n_speed &lt;- 1 
+scores_final_star &lt;- matrix(nrow = B, ncol = n)
+
+for(i in seq_len(B)) {
+  scores_final_star[i,] &lt;- scores_rep(n, n_speed)
+}
+```
+
+![](slides_files/figure-html/unnamed-chunk-9-1.png)&lt;!-- --&gt;
+
+With 1 speed climber in the final, their score is essentially fixed at 64.
+
+---
+
+# Medals
+
+What will it take to **medal** in the Olympics?
+
+
+```r
+medals_star &lt;- t(apply(scores_final_star, 1, rank)) &lt;= 3
+
+ggplot() +
+  geom_histogram(aes(scores_final_star[medals_star]), binwidth = 5) +
+  xlab("Simulated Combined Finals Scores to Medal") +
+  geom_vline(aes(xintercept = 64), colour = "red", lty = 2)
+```
+
+![](slides_files/figure-html/unnamed-chunk-10-1.png)&lt;!-- --&gt;
+
+
+```r
+speed_medal &lt;- medals_star[, seq_len(n_speed)]
+```
+
+---
+
+# Medals for Speed Specialists
+
+There is a 3% chance the speed specialist will medal in the Olympics, given there is 1 in the final.
+
+We can approximate the overall probability that a speed specialist (SS) will medal as
+
+`\begin{align*}
+&amp;P(\text{Atleast 1 Speed Specialist Medal}) = 1 - P(\text{0 Speed Specialists Medal})  \\
+&amp;\qquad \qquad = 1 - \sum\limits_{j = 0}^3 P(\text{0 SS Medal} | \text{j SS in Final})P(\text{j SS in Final})
+\end{align*}`
+
+and the probability that a speed specialist will win gold as
+
+`\begin{align*}
+&amp;P(\text{Speed Specialist Wins Gold}) \\
+&amp;\qquad \qquad = \sum\limits_{j = 0}^3 P(\text{Speed Specialist Wins Gold} | \text{j SS in Final})P(\text{j SS in Final})
+\end{align*}`
+
+---
+# Probability of Speed Success
+
+
+```r
+zero_speed_given_final &lt;- function(n_speed, B) {
+  scores_final_star &lt;- matrix(nrow = B, ncol = 8)
+  for(i in seq_len(B)) {
+    scores_final_star[i,] &lt;- scores_rep(8, n_speed)
+  }
+  
+  medals_star &lt;- t(apply(scores_final_star, 1, rank)) &lt;= 3
+  if(n_speed == 0) return(1)
+  else if(n_speed == 1) return(sum(!medals_star[, 1])/B)
+  else return(sum(rowSums(medals_star[, seq_len(n_speed)]) == 0)/B)
+}
+
+prob_speed_final &lt;- table(n_speed_final)/B
+prob_zero_speed_given_final &lt;- vapply(as.numeric(names(prob_speed_final)), FUN.VALUE = numeric(1), zero_speed_given_final, B = B)
+```
+
+
+The probability of a speed specialist medal is 3% and the probability of a speed specialist winning gold is 0%
+
+---
+
+&lt;iframe src="https://giphy.com/embed/PFwKHjOcIoVUc" width="711" height="400" frameBorder="0" class="giphy-embed" allowFullScreen&gt;&lt;/iframe&gt;&lt;p&gt;&lt;a href="https://giphy.com/gifs/PFwKHjOcIoVUc"&gt;via GIPHY&lt;/a&gt;&lt;/p&gt;
+
+---
+# Format over Function
+
+The three core concepts of the Tokyo 2020 Olympic Games are **Achieving Personal Best**, **Unity in Diversity**, and **Connecting to Tomorrow**.
+
+&gt; [T]he Tokyo 2020 Games aim to deliver an event where every athlete can realise their best performance and achieve their personal best.
+
+&gt; The Tokyo 2020 Games will foster a welcoming environment and raise awareness of unity in diversity among citizens of the world.
+
+[Tokyo 2020](https://tokyo2020.org/en/games/vision/)
+
+The format that the Olympics has adopted for Sport Climbing does not foster these goals.
+
+How can a speed specialist realize their **personal best** and feel part of a **welcoming environment** when there is zero chance for a gold medal before the games even begin?
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
